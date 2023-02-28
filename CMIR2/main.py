@@ -7,19 +7,19 @@ os.environ["JAVA_HOME"] = "/lib/jvm/java-11-openjdk-amd64/"
 
 experiments = ["baseline"]
 
-# val1 = int(sys.argv[1])/100
+val1 = int(sys.argv[1])
 # val2 = int(sys.argv[2])/100
 # val1 = 4.12
 
 
-mode = 'combined-tfidf'
+mode = 'tbrs2'
 for x in experiments:
-    # stopwords.create_stopwords(val1, 0, mode)
+    stopwords.create_stopwords(val1, 0, mode)
     pt.init()
     # create the index
     files = [f'dataset/{x}/{x}_corpus.trec']
     # shutil.rmtree('index/')
-    indexer = pt.TRECCollectionIndexer(f"./index/{x}_index/ind", stemmer = None)
+    indexer = pt.TRECCollectionIndexer(f"./index/{x}_index/ind_{val1}", stemmer = None)
     indexref = indexer.index(files)
 
     # index = pt.IndexFactory.of(f'/home/nitin/Desktop/BTP/CMIR2/index/{x}_index/data.properties')
@@ -37,6 +37,6 @@ for x in experiments:
     print(result)
     
     
-    # result.to_csv(f'results/only_stopwords/Combined/tfidf/best_result/{val1}_per_query.csv')
-    result.to_csv('baseline.csv')
+    result.to_csv(f'results/only_stopwords/tbrs2/{val1}.csv')
+    # result.to_csv('baseline.csv')
     

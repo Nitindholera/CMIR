@@ -1,8 +1,8 @@
 import zipfile
 import subprocess
 from collections import Counter
-import matplotlib.pyplot as plt
-from math import log10
+from math import log10, log2
+import numpy as np
 #returns list of words in sentence without tag
 def parse_word(sentence: str):
     eng_sentence = []
@@ -33,14 +33,17 @@ def create_stopwords(val1,val2, mode):
     indEng = Counter()
     indBn = Counter()
     combined_ind = Counter()
+
     ind_dict = dict()
     indEng_dict = dict()
     indBn_dict = dict()
     eng_words = 0
     Bn_words = 0
+    data = ["x"]
     for docid, x in enumerate(f):
         docid = docid + 1
         parsed = parse_word(x)
+        data.append(parsed[2])
         indEng.update(parsed[0])
         indBn.update(parsed[1])
         combined_ind.update(parsed[2])
@@ -120,8 +123,7 @@ def create_stopwords(val1,val2, mode):
         for i in indBn:
             if indBn[i] > val2:
                 s.write(i + '\n')
-
-    
+  
     elif mode == 'bn_and_english-df':
         for i in indEng:
             if len(indEng_dict[i]) > val1:
@@ -166,19 +168,76 @@ def create_stopwords(val1,val2, mode):
     elif mode == 'bn_and_english-tfidf':
         n = 107900
         v = len(ind_dict)
-        # g1 = []
-        # g2 = []
+        g1 = []
+        g2 = []
         for i in indEng_dict:
-            # g1.append(log10(n/len(indEng_dict[i])) * log10(v/indEng[i]))
+            g1.append(log10(n/len(indEng_dict[i])) * log10(v/indEng[i]))
             if(log10(n/len(indEng_dict[i])) * log10(v/indEng[i])) < val1:
                 s.write(i + '\n')
         
         for i in indBn_dict:
-            # g2.append(log10(n/len(indBn_dict[i])) * log10(v/indBn[i]))
+            g2.append(log10(n/len(indBn_dict[i])) * log10(v/indBn[i]))
             if (log10(n/len(indBn_dict[i])) * log10(v/indBn[i])) < val2:
                 s.write(i + '\n')
-        # print(min(g1), max(g1))
-        # print(min(g2), max(g2))
+        print(min(g1), max(g1))
+        print(min(g2), max(g2))
+
+    elif mode == 'tbrs':
+        Y = 1000
+        X = 200
+        L = 200
+        arr = dict()
+        for nitin in range(Y):
+            print(nitin)
+            w_rand = np.random.choice(list(ind_dict.keys()))
+
+            # print(combined_ind[w_rand])
+            # print(ind_dict[w_rand])
+            # print(w_rand)
+            KL_weight = dict()
+            sample_ind = Counter()
+            lx = 0
+            for i in ind_dict[w_rand]:
+                # print(data[i])
+                sample_ind.update(data[i])
+                lx+=len(data[i])
+            KL_weight_max = -1
+            for q_term in sample_ind:
+                Px = sample_ind[q_term]/lx
+                Pc = combined_ind[q_term]/len(combined_ind)
+                KL_weight[q_term] = Px * log2(Px/Pc)
+                KL_weight_max = max(KL_weight_max, Px * log2(Px/Pc))
+            
+            for q_term in sample_ind:
+                KL_weight[q_term] = KL_weight[q_term] / KL_weight_max
+            # print(KL_weight)
+            final_result = sorted([(KL_weight[x],x) for x in KL_weight])[:X]
+            # print(final_result)
+            for kl_val, term in final_result:
+                if term in arr:
+                    arr[term].append(kl_val)
+                else:
+                    arr[term] = [kl_val]
+        
+        for term in arr:
+            arr[term] = sum(arr[term]) / len(arr[term])
+        print(arr)
+        ghk = open('kl2.txt', 'w')
+        for _,term in sorted([(arr[x],x) for x in arr]):
+            # print(term)
+            ghk.write(term + '\n')
+        ghk.close()
+
+    elif mode == 'tbrs2':
+        ghk = open('kl.txt', 'r')
+        words = []
+        for word in ghk:
+            words.append(word[:-1])
+        ghk.close()
+        s = open('stopword-list.txt', 'w')
+        for i in range(val1):
+            s.write(str(words[i]) + '\n')
+        s.close()
 
     elif mode == 'test':
         print(len(indBn), len(indEng), len(combined_ind))
@@ -189,4 +248,4 @@ def create_stopwords(val1,val2, mode):
     with zipfile.ZipFile('/home/nitin/.pyterrier/terrier-assemblies-5.7-jar-with-dependencies.jar', 'a') as a:
         a.write("stopword-list.txt")
 
-# create_stopwords(2, 0, 'test')
+create_stopwords(5.8, 9.2, 'bn_and_english-tfidf')
